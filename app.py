@@ -17,6 +17,10 @@ os.makedirs("instance", exist_ok=True)
 
 db.init_app(app)
 
+if not os.path.exists(db_path):
+    with app.app_context():
+        db.create_all()
+
 with app.app_context():
     from models.team import Team
     db.create_all()
