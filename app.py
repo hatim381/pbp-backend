@@ -2,6 +2,8 @@ from flask import Flask
 from flask_cors import CORS  # Ajout pour le CORS
 from db import db
 from routes.teams import teams_bp
+from routes.scores import scores_bp
+from routes.tournaments import tournaments_bp
 import os
 
 app = Flask(__name__)
@@ -26,6 +28,8 @@ with app.app_context():
     db.create_all()
 
 app.register_blueprint(teams_bp)
+app.register_blueprint(scores_bp)
+app.register_blueprint(tournaments_bp)
 
 if __name__ == '__main__':
     import os
