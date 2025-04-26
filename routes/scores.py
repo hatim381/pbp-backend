@@ -39,3 +39,20 @@ def save_tournament_scores():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@scores_bp.route('/api/scores/<tournament_id>', methods=['DELETE'])
+def delete_tournament_scores(tournament_id):
+    try:
+        # Supprimer tous les scores du tournoi
+        deleted = Score.query.filter_by(tournament_id=tournament_id).delete()
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'message': f'Supprimé {deleted} scores'
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': f'Erreur lors de la suppression: {str(e)}'
+        }), 500
