@@ -1,44 +1,19 @@
 from flask import Blueprint, request, jsonify
 from models.team import Team
 from db import db
-from sqlalchemy.exc import OperationalError, SQLAlchemyError
-import time
 
 teams_bp = Blueprint('teams', __name__)
 
-def retry_on_db_error(func):
-    def wrapper(*args, **kwargs):
-        max_retries = 3
-        retry_delay = 1  # seconds
-        
-        for attempt in range(max_retries):
-            try:
-                return func(*args, **kwargs)
-            except OperationalError as e:
-                if attempt == max_retries - 1:
-                    raise
-                time.sleep(retry_delay)
-                db.session.rollback()
-                
-    return wrapper
-
 @teams_bp.route('/api/teams', methods=['GET'])
-@retry_on_db_error
-def get_teams():
+def get_all_teams():  # Renommé de 'get_teams' à 'get_all_teams'
     try:
         all_teams = Team.query.all()
-        if not all_teams:
-            return jsonify([]), 200
         return jsonify([team.to_dict() for team in all_teams]), 200
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        return jsonify({'error': 'Database error', 'details': str(e)}), 500
     except Exception as e:
-        return jsonify({'error': 'Server error', 'details': str(e)}), 500
+        return jsonify({'error': 'Erreur lors de la récupération', 'details': str(e)}), 500
 
 @teams_bp.route('/api/teams', methods=['POST'])
-@retry_on_db_error
-def add_team():
+def create_team():  # Renommé de 'add_team' à 'create_team'
     try:
         data = request.get_json()
         if not data or not data.get('members'):
@@ -59,8 +34,7 @@ def add_team():
         return jsonify({'error': 'Server error', 'details': str(e)}), 500
 
 @teams_bp.route('/api/teams/<int:team_id>', methods=['DELETE'])
-@retry_on_db_error
-def delete_team(team_id):
+def remove_team(team_id):  # Renommé de 'delete_team' à 'remove_team'
     team = Team.query.get(team_id)
     if not team:
         return jsonify({'error': 'Équipe non trouvée'}), 404
@@ -74,8 +48,7 @@ def delete_team(team_id):
         return jsonify({'error': 'Erreur lors de la suppression', 'details': str(e)}), 500
 
 @teams_bp.route('/api/teams/<int:team_id>', methods=['PUT'])
-@retry_on_db_error
-def update_team(team_id):
+def modify_team(team_id):  # Renommé de 'update_team' à 'modify_team'
     team = Team.query.get(team_id)
     if not team:
         return jsonify({'error': 'Équipe non trouvée'}), 404
@@ -97,7 +70,7 @@ def update_team(team_id):
         return jsonify({'error': 'Erreur lors de la mise à jour', 'details': str(e)}), 500
 
 @teams_bp.route('/api/teams/generate-pools', methods=['POST'])
-def generate_pools():
+def generate_pools_endpoint():  # Ajout de '_endpoint' pour éviter les conflits
     data = request.get_json()
     if not data or not isinstance(data.get('teams'), list):
         return jsonify({'error': 'Une liste d\'équipes est requise'}), 400
