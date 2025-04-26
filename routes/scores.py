@@ -44,3 +44,13 @@ def save_score():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@scores_bp.route('/api/scores/<tournament_id>', methods=['DELETE'])
+def delete_scores(tournament_id):
+    try:
+        Score.query.filter_by(tournament_id=tournament_id).delete()
+        db.session.commit()
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500

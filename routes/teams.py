@@ -1,39 +1,65 @@
 from flask import Blueprint, request, jsonify
 from models.team import Team
 from db import db
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
+import time
 
 teams_bp = Blueprint('teams', __name__)
 
+def retry_on_db_error(func):
+    def wrapper(*args, **kwargs):
+        max_retries = 3
+        retry_delay = 1  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                return func(*args, **kwargs)
+            except OperationalError as e:
+                if attempt == max_retries - 1:
+                    raise
+                time.sleep(retry_delay)
+                db.session.rollback()
+                
+    return wrapper
+
 @teams_bp.route('/api/teams', methods=['GET'])
+@retry_on_db_error
 def get_teams():
     try:
         all_teams = Team.query.all()
+        if not all_teams:
+            return jsonify([]), 200
         return jsonify([team.to_dict() for team in all_teams]), 200
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({'error': 'Database error', 'details': str(e)}), 500
     except Exception as e:
-        return jsonify({'error': 'Erreur lors de la récupération', 'details': str(e)}), 500
+        return jsonify({'error': 'Server error', 'details': str(e)}), 500
 
 @teams_bp.route('/api/teams', methods=['POST'])
+@retry_on_db_error
 def add_team():
-    data = request.get_json()
-    if not data or not data.get('members'):
-        return jsonify({'error': 'Le champ "members" est obligatoire'}), 400
-
-    new_team = Team(
-        name=data.get('name', data['members']),  # Utilise 'name' si fourni, sinon 'members'
-        members=data['members'],
-        email=data.get('email', ''),
-        phone=data.get('phone', '')
-    )
-
     try:
+        data = request.get_json()
+        if not data or not data.get('members'):
+            return jsonify({'error': 'Invalid data'}), 400
+
+        new_team = Team(
+            name=data.get('name', data['members']),
+            members=data['members']
+        )
+
         db.session.add(new_team)
         db.session.commit()
         return jsonify(new_team.to_dict()), 201
-    except Exception as e:
+    except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({"error": "Erreur lors de l'ajout", "details": str(e)}), 500
+        return jsonify({'error': 'Database error', 'details': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': 'Server error', 'details': str(e)}), 500
 
 @teams_bp.route('/api/teams/<int:team_id>', methods=['DELETE'])
+@retry_on_db_error
 def delete_team(team_id):
     team = Team.query.get(team_id)
     if not team:
@@ -48,6 +74,7 @@ def delete_team(team_id):
         return jsonify({'error': 'Erreur lors de la suppression', 'details': str(e)}), 500
 
 @teams_bp.route('/api/teams/<int:team_id>', methods=['PUT'])
+@retry_on_db_error
 def update_team(team_id):
     team = Team.query.get(team_id)
     if not team:
