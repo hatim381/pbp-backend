@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from models.team import Team
 from db import db
+from sqlalchemy.exc import SQLAlchemyError
 
 teams_bp = Blueprint('teams', __name__)
 
@@ -58,9 +59,9 @@ def modify_team(team_id):  # Renommé de 'update_team' à 'modify_team'
         return jsonify({'error': 'Aucune donnée reçue'}), 400
 
     try:
-        # met à jour uniquement ce qui est fourni
+        # Met à jour uniquement les champs fournis dans la requête
         team.members = data.get('members', team.members)
-        team.name = data.get('members', team.name)  # optionnel : suivre members
+        team.name = data.get('name', team.name)
         team.email = data.get('email', team.email)
         team.phone = data.get('phone', team.phone)
         db.session.commit()
