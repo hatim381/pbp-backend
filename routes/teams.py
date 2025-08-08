@@ -16,13 +16,22 @@ def get_all_teams():  # Renommé de 'get_teams' à 'get_all_teams'
 @teams_bp.route('/api/teams', methods=['POST'])
 def create_team():  # Renommé de 'add_team' à 'create_team'
     try:
-        data = request.get_json()
-        if not data or not data.get('members'):
+        data = request.get_json() or {}
+        name = data.get('name')
+        members = data.get('members')
+
+        if not name or not members:
             return jsonify({'error': 'Invalid data'}), 400
 
+        # Allow members to be provided either as a string or a list
+        if isinstance(members, list):
+            members = ",".join(members)
+
         new_team = Team(
-            name=data.get('name', data['members']),
-            members=data['members']
+            name=name,
+            members=members,
+            email=data.get('email'),
+            phone=data.get('phone')
         )
 
         db.session.add(new_team)
