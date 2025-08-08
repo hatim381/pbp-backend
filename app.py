@@ -4,6 +4,7 @@ from db import db
 from routes.teams import teams_bp
 from routes.scores import scores_bp
 from routes.tournaments import tournaments_bp
+from routes.pools import pools_bp
 import os
 
 app = Flask(__name__)
@@ -30,6 +31,7 @@ with app.app_context():
 app.register_blueprint(teams_bp)
 app.register_blueprint(scores_bp)
 app.register_blueprint(tournaments_bp)
+app.register_blueprint(pools_bp)
 
 if __name__ == '__main__':
     import os
